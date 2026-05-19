@@ -1,0 +1,14 @@
+{
+  "active_profile": "coding",
+  "source_profile_path": "/Users/chenjie/.claude/skills/dprofile/dprofile/profiles/coding",
+  "profiles_dir": "/Users/chenjie/.claude/skills/dprofile/dprofile/profiles",
+  "target_dir": "/Users/chenjie/Code/rust/yac",
+  "switched_at": "2026-05-15T09:34:48.065779+00:00",
+  "backup_path": null,
+  "write_mode": "symlink",
+  "files": [
+    "/Users/chenjie/Code/rust/yac/USER.md",
+    "/Users/chenjie/Code/rust/yac/SOUL.md",
+    "/Users/chenjie/Code/rust/yac/AGENTS.md"
+  ]
+}

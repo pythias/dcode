@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useImperativeHandle, forwardRef, useRef } from "react";
 import ContextMenu, { MenuItem } from "./ContextMenu";
 import SearchPanel from "./SearchPanel";
 import {
@@ -71,7 +71,12 @@ function fileVisual(entry: FileEntry, isExpanded: boolean, isWorkspaceRoot: bool
   return FILE_VISUALS[ext] || { icon: "file-lines", color: "#8b949e" };
 }
 
-export default function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder, onOpenFile, onOpenTerminal, activeFile, dirtyFilePaths, width, onWidthChange, showSearch, onToggleSearch }: Props) {
+export interface SidebarHandle {
+  revealFile: (path: string) => void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Sidebar = forwardRef<SidebarHandle, Props>(function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder, onOpenFile, onOpenTerminal, activeFile, dirtyFilePaths, width, onWidthChange, showSearch, onToggleSearch }: Props, ref: any) {
   const [entriesByRoot, setEntriesByRoot] = useState<Record<string, FileEntry[]>>({});
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
@@ -96,6 +101,8 @@ export default function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder,
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const entriesByRootRef = useRef<Record<string, FileEntry[]>>({});
+  entriesByRootRef.current = entriesByRoot;
 
   const getWorkspaceRootForPath = useCallback((path: string): string | null => {
     let best: string | null = null;
@@ -106,6 +113,31 @@ export default function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder,
     }
     return best;
   }, [workspaceFolders]);
+
+  const revealFile = useCallback(async (path: string) => {
+    const root = getWorkspaceRootForPath(path);
+    if (!root) return;
+
+    const relative = path.slice(root.length + 1);
+    const parts = relative.split("/");
+
+    let expandPath = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      expandPath = expandPath + "/" + parts[i];
+      const children = entriesByRootRef.current[expandPath];
+      if (!children || children.length === 0) {
+        try {
+          const { invoke } = await import("@tauri-apps/api/core");
+          const loaded = await invoke<FileEntry[]>("read_dir", { path: expandPath, workspaceRoot: root });
+          setEntriesByRoot((prev) => ({ ...prev, [expandPath]: loaded }));
+          setExpanded((prev) => new Set(prev).add(expandPath));
+        } catch {}
+      }
+      setExpanded((prev) => new Set(prev).add(expandPath));
+    }
+  }, [getWorkspaceRootForPath]);
+
+  useImperativeHandle(ref, () => ({ revealFile }), [revealFile]);
 
   const loadDir = async (path: string): Promise<FileEntry[]> => {
     try {
@@ -161,11 +193,11 @@ export default function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder,
     }
   };
 
-  const handleContextMenu = (e: React.MouseEvent, entry: FileEntry) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, entry: FileEntry) => {
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, entry });
-  };
+  }, []);
 
   const getContextMenuItems = (entry: FileEntry): MenuItem[] => {
     const items: MenuItem[] = [];
@@ -350,12 +382,7 @@ export default function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder,
         />
       ) : (
         <>
-          <div className="sidebar-header">
-            Explorer
-            <button onClick={handleOpen} style={{ marginLeft: "auto", background: "none", border: "none", color: "#0af", cursor: "pointer", fontSize: 11 }}>
-              Add Folder
-            </button>
-          </div>
+          <div className="sidebar-header">Explorer</div>
           {workspaceFolders.map((folder) => {
             const rootEntry: FileEntry = {
               name: pathBasename(folder),
@@ -381,4 +408,6 @@ export default function Sidebar({ workspaceFolders, onAddFolder, onRemoveFolder,
       />
     </div>
   );
-}
+});
+
+export default Sidebar;

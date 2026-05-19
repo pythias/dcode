@@ -9,15 +9,17 @@ interface Props {
   onClose: (path: string) => void;
   onCloseOthers: (path: string) => void;
   onCloseRight: (path: string) => void;
+  onRevealInTree: (path: string) => void;
 }
 
-export default function EditorTabs({ files, activeFile, onSelect, onClose, onCloseOthers, onCloseRight }: Props) {
+export default function EditorTabs({ files, activeFile, onSelect, onClose, onCloseOthers, onCloseRight, onRevealInTree }: Props) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetPath: string } | null>(null);
 
   if (files.length === 0) return <div className="tabs" />;
 
   const menuItems = contextMenu
     ? [
+        { label: "在树中定位", action: () => onRevealInTree(contextMenu.targetPath) },
         { label: "关闭", action: () => onClose(contextMenu.targetPath) },
         { label: "关闭其他", action: () => onCloseOthers(contextMenu.targetPath) },
         { label: "关闭右侧", action: () => onCloseRight(contextMenu.targetPath) },

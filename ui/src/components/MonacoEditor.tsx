@@ -27,19 +27,19 @@ function getLanguage(filename: string): string {
     sh: "shell", bash: "shell", zsh: "shell",
     c: "c", cpp: "cpp", h: "c", hpp: "cpp",
     java: "java", xml: "xml", sql: "sql",
-    dockerfile: "dockerfile",
+    dockerfile: "dockerfile", php: "php",
   };
   return map[ext] || "plaintext";
 }
 
 function getMonacoTheme(theme: string): string {
   const map: Record<string, string> = {
-    dark: "yac-dark",
-    light: "yac-light",
-    monokai: "yac-monokai",
-    "solarized-dark": "yac-solarized-dark",
+    dark: "dcode-dark",
+    light: "dcode-light",
+    monokai: "dcode-monokai",
+    "solarized-dark": "dcode-solarized-dark",
   };
-  return map[theme] || "yac-dark";
+  return map[theme] || "dcode-dark";
 }
 
 export default function MonacoEditor({ file, rootPath, onChange, onSave, onReload, onCursorChange, settings, theme }: Props) {
@@ -63,7 +63,7 @@ export default function MonacoEditor({ file, rootPath, onChange, onSave, onReloa
       column: position?.column || 1,
     });
 
-    monaco.editor.defineTheme("yac-dark", {
+    monaco.editor.defineTheme("dcode-dark", {
       base: "vs-dark",
       inherit: true,
       rules: [],
@@ -79,7 +79,7 @@ export default function MonacoEditor({ file, rootPath, onChange, onSave, onReloa
       },
     });
 
-    monaco.editor.defineTheme("yac-light", {
+    monaco.editor.defineTheme("dcode-light", {
       base: "vs",
       inherit: true,
       rules: [],
@@ -95,7 +95,7 @@ export default function MonacoEditor({ file, rootPath, onChange, onSave, onReloa
       },
     });
 
-    monaco.editor.defineTheme("yac-monokai", {
+    monaco.editor.defineTheme("dcode-monokai", {
       base: "vs-dark",
       inherit: true,
       rules: [
@@ -118,7 +118,7 @@ export default function MonacoEditor({ file, rootPath, onChange, onSave, onReloa
       },
     });
 
-    monaco.editor.defineTheme("yac-solarized-dark", {
+    monaco.editor.defineTheme("dcode-solarized-dark", {
       base: "vs-dark",
       inherit: true,
       rules: [

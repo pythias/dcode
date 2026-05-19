@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/format-conf/main/schemas/tauri.json",
-  "productName": "Yac IDE",
+  "productName": "DCode",
   "version": "0.2.5",
-  "identifier": "dev.yac.ide",
+  "identifier": "dev.dcode.ide",
   "build": {
     "frontendDist": "../ui/dist",
     "devUrl": "http://localhost:5173",
@@ -12,12 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "Yac IDE",
+        "title": "DCode",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
         "minHeight": 600,
-        "transparent": true
+        "decorations": true
       }
     ],
     "macOSPrivateApi": true,

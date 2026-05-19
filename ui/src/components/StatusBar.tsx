@@ -9,6 +9,9 @@ interface Props {
   settings: EditorSettings;
   theme: string;
   onToggleTerminal: () => void;
+  onToggleSidebar: () => void;
+  showTerminal: boolean;
+  showSidebar: boolean;
   /** AI CLI launcher row (e.g. Codex / Claude); shown when workspace is open. */
   aiCliShortcuts?: ReactNode;
 }
@@ -65,6 +68,9 @@ export default function StatusBar({
   settings,
   theme,
   onToggleTerminal,
+  onToggleSidebar,
+  showTerminal,
+  showSidebar,
   aiCliShortcuts,
 }: Props) {
   return (
@@ -85,9 +91,21 @@ export default function StatusBar({
         <div className="status-bar-center">{aiCliShortcuts}</div>
       ) : null}
       <div className="status-bar-right">
-        <button className="status-button" onClick={onToggleTerminal} title="Toggle Terminal">
+        {workspaceFolders.length > 0 && (
+          <button
+            className={`status-button${showSidebar ? " active" : ""}`}
+            onClick={onToggleSidebar}
+            title={showSidebar ? "Hide Tree" : "Show Tree"}
+          >
+            <i className="fa-regular fa-folder-tree"></i>
+          </button>
+        )}
+        <button
+          className={`status-button${showTerminal ? " active" : ""}`}
+          onClick={onToggleTerminal}
+          title={showTerminal ? "Hide Terminal" : "Show Terminal"}
+        >
           <i className="fa-solid fa-terminal"></i>
-          <span>Terminal</span>
         </button>
         {file && (
           <>

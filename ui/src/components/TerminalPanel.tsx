@@ -196,6 +196,7 @@ const TabItem = memo(({
       {canClose && (
         <span
           className="terminal-tab-close"
+          title="关闭标签"
           onClick={(e) => {
             e.stopPropagation();
             onClose();
@@ -242,6 +243,10 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tabsRef = useRef<TermTab[]>([]);
   const activeTabRef = useRef(0);
+  const cwdRef = useRef(cwd);
+  const themeRef = useRef(theme);
+  cwdRef.current = cwd;
+  themeRef.current = theme;
 
   tabsRef.current = tabs;
 
@@ -280,10 +285,10 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
 
   const createTerminal = useCallback(async (termCwd?: string | null) => {
     const { invoke } = await import("@tauri-apps/api/core");
-    const effectiveCwd = termCwd || cwd || undefined;
+    const effectiveCwd = termCwd || cwdRef.current || undefined;
 
     const term = new Terminal({
-      theme: getXtermTheme(theme) as any,
+      theme: getXtermTheme(themeRef.current) as any,
       fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, monospace",
       fontSize: 13,
       cursorBlink: true,
@@ -372,12 +377,14 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
     });
 
     return newTab;
-  }, [cwd, theme]);
+  }, []);
 
   const runLineInActiveTerminal = useCallback(
     async (line: string) => {
       const { invoke } = await import("@tauri-apps/api/core");
-      for (let i = 0; i < 40 && tabsRef.current.length === 0; i++) {
+      // Wait for at least one tab to exist (max 640ms)
+      const deadline = Date.now() + 640;
+      while (Date.now() < deadline && tabsRef.current.length === 0) {
         await new Promise((r) => setTimeout(r, 16));
       }
       let tab =
@@ -426,9 +433,13 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
   useEffect(() => {
     let cancelled = false;
     let termTab: TermTab | null = null;
-    createTerminal().then((tab) => {
-      if (!cancelled && tab) termTab = tab;
-    });
+    createTerminal()
+      .then((tab) => {
+        if (!cancelled && tab) termTab = tab;
+      })
+      .catch((err) => {
+        console.error("Failed to create initial terminal:", err);
+      });
     return () => {
       cancelled = true;
       if (fitFrameRef.current !== null) {
@@ -440,7 +451,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
         termTab.terminal.dispose();
       }
     };
-  }, []);
+  }, [createTerminal]);
 
   // Sync tab visibility and fit
   useEffect(() => {
@@ -528,22 +539,20 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
             canClose={tabs.length > 1}
           />
         ))}
-        <button className="add-term-btn" onClick={() => createTerminal()}>+</button>
-        <button
-          className="toggle-pos-btn"
-          title="Clear Terminal"
-          onClick={() => clearTerminal(tabs[activeTab])}
-        >
-          <i className="fa-solid fa-broom"></i>
-        </button>
-        <button
-          className="toggle-pos-btn"
-          title={position === "bottom" ? "移到右侧" : "移到底部"}
-          onClick={onTogglePosition}
-          style={{ marginLeft: "auto" }}
-        >
-          {position === "bottom" ? "⊡" : "⊟"}
-        </button>
+        <div className="terminal-tab-actions">
+          <button
+            title="清屏"
+            onClick={() => clearTerminal(tabs[activeTab])}
+          >
+            <i className="fa-solid fa-eraser"></i>
+          </button>
+          <button
+            title={position === "bottom" ? "显示在右侧" : "显示在底部"}
+            onClick={onTogglePosition}
+          >
+            <i className={position === "bottom" ? "fa-solid fa-arrow-right" : "fa-solid fa-arrow-down"}></i>
+          </button>
+        </div>
       </div>
       {showSearch && (
         <div className="terminal-search-bar">
@@ -568,9 +577,9 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, Props>(({ cwd, position, o
               }
             }}
           />
-          <button onClick={() => safeSearch(tabs[activeTab], "findPrevious", searchQuery)}>▲</button>
-          <button onClick={() => safeSearch(tabs[activeTab], "findNext", searchQuery)}>▼</button>
-          <button onClick={() => {
+          <button title="上一个匹配" onClick={() => safeSearch(tabs[activeTab], "findPrevious", searchQuery)}>▲</button>
+          <button title="下一个匹配" onClick={() => safeSearch(tabs[activeTab], "findNext", searchQuery)}>▼</button>
+          <button title="关闭搜索" onClick={() => {
             setShowSearch(false);
             setSearchQuery("");
           }}>✕</button>

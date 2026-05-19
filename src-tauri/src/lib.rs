@@ -251,12 +251,49 @@ struct CliBinarySpec {
 fn resolve_cli_binaries(
     specs: Vec<CliBinarySpec>,
 ) -> Result<std::collections::HashMap<String, Option<String>>, String> {
+    // Get user's full PATH from login shell (includes Homebrew, ~/.local/bin, etc.)
+    let user_path = std::process::Command::new("/bin/zsh")
+        .args(["-l", "-c", "echo \"$PATH\""])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+            } else {
+                None
+            }
+        });
+
+    let search_path: Vec<std::path::PathBuf> = user_path
+        .as_ref()
+        .map(|p| {
+            std::env::split_paths(p)
+                .filter(|pb| !pb.as_os_str().is_empty())
+                .collect()
+        })
+        .unwrap_or_else(|| {
+            // Fallback to minimal system PATH
+            std::env::split_paths("/usr/bin:/bin:/usr/sbin:/sbin").collect()
+        });
+
     let mut out = std::collections::HashMap::new();
     for spec in specs {
         let mut found: Option<String> = None;
-        for name in spec.candidates {
-            if let Ok(p) = which::which(&name) {
-                found = Some(p.to_string_lossy().into_owned());
+        for name in &spec.candidates {
+            for dir in &search_path {
+                let candidate = dir.join(name.as_str());
+                if candidate.is_file() {
+                    // Check executable permission
+                    if let Ok(metadata) = std::fs::metadata(&candidate) {
+                        use std::os::unix::fs::PermissionsExt;
+                        if metadata.permissions().mode() & 0o111 != 0 {
+                            found = Some(candidate.to_string_lossy().into_owned());
+                            break;
+                        }
+                    }
+                }
+            }
+            if found.is_some() {
                 break;
             }
         }
@@ -299,7 +336,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             let app_menu = Submenu::with_items(
                 handle,
-                "Yac IDE",
+                "DCode",
                 true,
                 &[
                     &PredefinedMenuItem::about(handle, None, None)?,
@@ -317,27 +354,12 @@ pub fn run() {
             #[cfg(not(target_os = "macos"))]
             let app_menu = Submenu::with_items(
                 handle,
-                "Yac IDE",
+                "DCode",
                 true,
                 &[
                     &PredefinedMenuItem::about(handle, None, None)?,
                     &PredefinedMenuItem::separator(handle)?,
                     &PredefinedMenuItem::quit(handle, None)?,
-                ],
-            )?;
-
-            let edit_menu = Submenu::with_items(
-                handle,
-                "Edit",
-                true,
-                &[
-                    &PredefinedMenuItem::undo(handle, None)?,
-                    &PredefinedMenuItem::redo(handle, None)?,
-                    &PredefinedMenuItem::separator(handle)?,
-                    &PredefinedMenuItem::cut(handle, None)?,
-                    &PredefinedMenuItem::copy(handle, None)?,
-                    &PredefinedMenuItem::paste(handle, None)?,
-                    &PredefinedMenuItem::select_all(handle, None)?,
                 ],
             )?;
 
@@ -450,11 +472,19 @@ pub fn run() {
                 &[
                     &PredefinedMenuItem::minimize(handle, None)?,
                     &PredefinedMenuItem::separator(handle)?,
-                    &PredefinedMenuItem::close_window(handle, None)?,
+                    &MenuItem::with_id(handle, "split_editor", "Split Editor", true, Some("CmdOrCtrl+\\"))?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &MenuItem::with_id(handle, "toggle_sidebar_menu", "Toggle Sidebar", true, Some("CmdOrCtrl+B"))?,
+                    &MenuItem::with_id(handle, "toggle_terminal_menu", "Toggle Terminal", true, Some("CmdOrCtrl+J"))?,
+                    &MenuItem::with_id(handle, "toggle_search_menu", "Toggle Search", true, Some("CmdOrCtrl+Shift+F"))?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &PredefinedMenuItem::fullscreen(handle, None)?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &MenuItem::with_id(handle, "new_window", "New Window", true, Some("CmdOrCtrl+Shift+N"))?,
                 ],
             )?;
 
-            let menu = Menu::with_items(handle, &[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu])?;
+            let menu = Menu::with_items(handle, &[&app_menu, &file_menu, &view_menu, &window_menu])?;
             app.set_menu(menu)?;
 
             app.on_menu_event(move |handle, event| {
@@ -481,11 +511,17 @@ pub fn run() {
                     "new_text_file" => {
                         let _ = handle.emit("menu-event", "new-text-file");
                     }
-                    "toggle_sidebar" => {
+                    "toggle_sidebar" | "toggle_sidebar_menu" => {
                         let _ = handle.emit("menu-event", "toggle-sidebar");
                     }
-                    "toggle_terminal" => {
+                    "toggle_terminal" | "toggle_terminal_menu" => {
                         let _ = handle.emit("menu-event", "toggle-terminal");
+                    }
+                    "toggle_search_menu" => {
+                        let _ = handle.emit("menu-event", "toggle-search");
+                    }
+                    "split_editor" => {
+                        let _ = handle.emit("menu-event", "split-editor");
                     }
                     "toggle_minimap" => {
                         let _ = handle.emit("menu-event", "toggle-minimap");
@@ -537,5 +573,8 @@ pub fn run() {
             }
         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("Error while running tauri application: {}", e);
+            std::process::exit(1);
+        });
 }

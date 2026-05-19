@@ -254,7 +254,7 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos();
-            let path = std::env::temp_dir().join(format!("yac-{name}-{unique}"));
+            let path = std::env::temp_dir().join(format!("dcode-{name}-{unique}"));
             fs::create_dir_all(&path).unwrap();
             Self { path }
         }
