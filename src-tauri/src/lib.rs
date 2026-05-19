@@ -252,6 +252,8 @@ fn resolve_cli_binaries(
     specs: Vec<CliBinarySpec>,
 ) -> Result<std::collections::HashMap<String, Option<String>>, String> {
     // Get user's full PATH from login shell (includes Homebrew, ~/.local/bin, etc.)
+    // Only works on Unix-like systems
+    #[cfg(unix)]
     let user_path = std::process::Command::new("/bin/zsh")
         .args(["-l", "-c", "echo \"$PATH\""])
         .output()
@@ -263,6 +265,9 @@ fn resolve_cli_binaries(
                 None
             }
         });
+
+    #[cfg(not(unix))]
+    let user_path: Option<String> = None;
 
     let search_path: Vec<std::path::PathBuf> = user_path
         .as_ref()
@@ -283,13 +288,22 @@ fn resolve_cli_binaries(
             for dir in &search_path {
                 let candidate = dir.join(name.as_str());
                 if candidate.is_file() {
-                    // Check executable permission
-                    if let Ok(metadata) = std::fs::metadata(&candidate) {
+                    // Check executable permission (Unix only)
+                    #[cfg(unix)]
+                    {
                         use std::os::unix::fs::PermissionsExt;
-                        if metadata.permissions().mode() & 0o111 != 0 {
-                            found = Some(candidate.to_string_lossy().into_owned());
-                            break;
+                        if let Ok(metadata) = std::fs::metadata(&candidate) {
+                            if metadata.permissions().mode() & 0o111 != 0 {
+                                found = Some(candidate.to_string_lossy().into_owned());
+                                break;
+                            }
                         }
+                    }
+                    // On non-Unix platforms, just check if file exists
+                    #[cfg(not(unix))]
+                    {
+                        found = Some(candidate.to_string_lossy().into_owned());
+                        break;
                     }
                 }
             }
