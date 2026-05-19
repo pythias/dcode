@@ -6,7 +6,7 @@
   --bg-hover: rgba(42, 45, 46, 0.8);
   --bg-active: rgba(55, 55, 61, 0.9);
   --text-primary: #d4d4d4;
-  --text-secondary: #888;
+  --text-secondary: #9a9a9a;
   --border-color: rgba(51, 51, 51, 0.5);
   --accent-color: #0af;
   --tab-active-bg: rgba(30, 30, 30, 0.5);
@@ -86,18 +86,7 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   height: 100vh;
-}
-
-.titlebar {
-  height: 32px;
-  background: var(--bg-tertiary);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  -webkit-app-region: drag;
-  user-select: none;
+  position: relative;
 }
 
 .main-content {
@@ -178,6 +167,11 @@ html, body, #root {
   background: var(--bg-hover);
 }
 
+.terminal-ai-cli-chip:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
 .terminal-ai-cli-chip-icon {
   display: flex;
   align-items: center;
@@ -217,10 +211,20 @@ html, body, #root {
   cursor: pointer;
 }
 
+.status-button.active {
+  color: var(--accent-color);
+}
+
 .status-button:hover,
 .status-item:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.status-button:focus-visible,
+.status-item:focus-visible {
+  outline: 1px solid var(--accent-color);
+  outline-offset: -1px;
 }
 
 .status-workspace {
@@ -365,16 +369,18 @@ html, body, #root {
 
 .tab.active {
   background: var(--tab-active-bg);
-  border-bottom: 1px solid var(--tab-active-bg);
+  border-bottom: 2px solid var(--accent-color);
 }
 
 .tab .close-btn {
-  opacity: 0;
+  opacity: 0.35;
   font-size: 14px;
   line-height: 1;
+  transition: opacity 0.15s;
 }
 
-.tab:hover .close-btn {
+.tab:hover .close-btn,
+.tab .close-btn:focus {
   opacity: 0.7;
 }
 
@@ -398,7 +404,7 @@ html, body, #root {
 
 .terminal-container {
   border-top: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -427,6 +433,33 @@ html, body, #root {
 }
 
 .terminal-tabs button:hover {
+  color: var(--text-primary);
+}
+
+.terminal-tab-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.terminal-tab-actions button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.terminal-tab-actions button:hover {
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
@@ -512,6 +545,11 @@ html, body, #root {
   max-width: 160px;
 }
 
+.rename-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-color);
+  border-color: var(--accent-color);
+}
+
 /* Tab color picker */
 .tab-color-picker {
   position: fixed;
@@ -537,7 +575,7 @@ html, body, #root {
 }
 
 .color-swatch:hover {
-  border-color: #fff;
+  border-color: var(--accent-color);
 }
 
 /* Tab icon picker */
@@ -591,8 +629,9 @@ html, body, #root {
 .terminal-drag-handle-h {
   height: 4px;
   cursor: row-resize;
-  background: transparent;
+  background: var(--border-color);
   flex-shrink: 0;
+  transition: background 0.15s;
 }
 
 .terminal-drag-handle-h:hover,
@@ -603,8 +642,14 @@ html, body, #root {
 .terminal-drag-handle-v {
   width: 4px;
   cursor: col-resize;
-  background: transparent;
+  background: var(--border-color);
   flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.terminal-drag-handle-v:hover,
+.terminal-drag-handle-v.dragging {
+  background: var(--accent-color);
 }
 
 /* ── Terminal Search Bar ────────────────────────── */
@@ -644,10 +689,6 @@ html, body, #root {
   color: var(--text-primary);
 }
 
-.terminal-drag-handle-v:hover,
-.terminal-drag-handle-v.dragging {
-  background: var(--accent-color);
-}
 
 /* editor-main wrapper used in right mode */
 .editor-main {
@@ -703,6 +744,10 @@ html, body, #root {
 
 .quick-open-input::placeholder {
   color: var(--text-secondary);
+}
+
+.quick-open-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-color);
 }
 
 .quick-open-results {
@@ -804,6 +849,7 @@ html, body, #root {
 .sidebar-view-tabs {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 8px 4px 0 4px;
   gap: 2px;
   background: var(--bg-secondary);
@@ -854,6 +900,7 @@ html, body, #root {
   background: linear-gradient(135deg, var(--accent-color), #fff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: var(--accent-color);
 }
 
 .welcome-content p {
@@ -862,6 +909,9 @@ html, body, #root {
 }
 
 .welcome-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
   margin-bottom: 48px;
 }
 
@@ -937,4 +987,38 @@ html, body, #root {
   border-radius: 3px;
   text-align: center;
   margin-right: 8px;
+}
+
+/* ── Drag-and-Drop Overlay ────────────────────────── */
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drag-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 64px;
+  border: 2px dashed var(--accent-color);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
+}
+
+.drag-overlay-content i {
+  font-size: 48px;
+  color: var(--accent-color);
+  opacity: 0.8;
+}
+
+.drag-overlay-content p {
+  font-size: 16px;
+  color: var(--text-secondary);
 }

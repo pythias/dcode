@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import Sidebar from "./components/Sidebar";
+import Sidebar, { SidebarHandle } from "./components/Sidebar";
 import EditorTabs from "./components/EditorTabs";
 import MonacoEditor from "./components/MonacoEditor";
 import TerminalPanel, { TerminalPanelHandle } from "./components/TerminalPanel";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import QuickOpen, { QuickCommand } from "./components/QuickOpen";
 import StatusBar from "./components/StatusBar";
 import { AiCliShortcuts } from "./components/AiCliShortcuts";
@@ -29,9 +30,9 @@ interface SavedState {
   showTerminal: boolean;
 }
 
-const BASE_STATE_KEY = "yac-ide-state";
+const BASE_STATE_KEY = "dcode-ide-state";
 const MAX_RECENT_FILES = 10;
-const RECENT_FILES_KEY = "yac-recent-files";
+const RECENT_FILES_KEY = "dcode-recent-files";
 export const UNTITLED_PREFIX = "untitled:";
 
 export function isUntitledPath(path: string): boolean {
@@ -97,8 +98,8 @@ async function openWorkspaceWindow(folders: string[]) {
   const url = `index.html?workspaceFolders=${encodeURIComponent(JSON.stringify(folders))}`;
   const title =
     folders.length === 1
-      ? `Yac IDE - ${folders[0]}`
-      : `Yac IDE - ${folders.length} Folders`;
+      ? `DCode — ${folders[0]}`
+      : `DCode — ${folders.length} Folders`;
 
   return new WebviewWindow(label, {
     title,
@@ -139,7 +140,7 @@ export default function App() {
   // Initialize data-theme immediately to avoid flash on first render
   if (typeof document !== "undefined") {
     document.documentElement.dataset.theme =
-      localStorage.getItem("yac-theme") || "dark";
+      localStorage.getItem("dcode-theme") || "dark";
   }
 
   const saved = useRef(loadState());
@@ -187,6 +188,7 @@ export default function App() {
   const rootPath = workspaceFolders[0] || null;
   const terminalRef = useRef<TerminalPanelHandle>(null);
   const mainContentRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<SidebarHandle>(null);
 
   const runCliLineInTerminal = useCallback((line: string) => {
     setShowTerminal(true);
@@ -198,44 +200,162 @@ export default function App() {
   }, []);
 
   const [sidebarWidth, setSidebarWidth] = useState<number>(
-    () => Number(localStorage.getItem("yac-sidebar-width")) || 220
+    () => Number(localStorage.getItem("dcode-sidebar-width")) || 220
   );
   const [terminalPosition, setTerminalPosition] = useState<"bottom" | "right">(
-    () => (localStorage.getItem("yac-terminal-position") as "bottom" | "right") || "bottom"
+    () => (localStorage.getItem("dcode-terminal-position") as "bottom" | "right") || "bottom"
   );
   const [terminalSize, setTerminalSize] = useState<number>(
-    () => Number(localStorage.getItem("yac-terminal-size")) || 250
+    () => Number(localStorage.getItem("dcode-terminal-size")) || 250
   );
 
   const [theme, setTheme] = useState<string>(
-    () => localStorage.getItem("yac-theme") || "dark"
+    () => localStorage.getItem("dcode-theme") || "dark"
   );
   const [showSidebar, setShowSidebar] = useState(
-    () => localStorage.getItem("yac-show-sidebar") !== "false"
+    () => localStorage.getItem("dcode-show-sidebar") !== "false"
   );
   const [showQuickOpen, setShowQuickOpen] = useState(false);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragCounterRef = useRef(0);
   const closeConfirmedRef = useRef(false);
   const closePromptOpenRef = useRef(false);
   const untitledCounterRef = useRef(0);
 
+  // Drag-and-drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1 && hasFileTypes(e)) {
+      setIsDraggingFile(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDraggingFile(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const hasFileTypes = (e: React.DragEvent): boolean => {
+    const types = e.dataTransfer.types;
+    return types.includes("Files") || types.includes("file");
+  };
+
+  const handleFileDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    dragCounterRef.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const paths: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i] as any;
+      if (file.path) {
+        paths.push(file.path);
+      }
+    }
+
+    if (paths.length === 0) return;
+
+    // Import needed functions
+    const { invoke } = await import("@tauri-apps/api/core");
+
+    for (const filePath of paths) {
+      try {
+        // Check if it's a directory
+        let isDir = false;
+        try {
+          await invoke("read_dir", { path: filePath, workspaceRoot: null });
+          isDir = true;
+        } catch {
+          // Not a directory, treat as file
+        }
+
+        if (isDir) {
+          setWorkspaceFolders((prev) => normalizeFolders([...prev, filePath]));
+        } else {
+          // It's a file
+          const name = filePath.split("/").pop() || filePath;
+          // Get current workspaceFolders state
+          setWorkspaceFolders((currentFolders) => {
+            if (currentFolders.length === 0) {
+              // No workspace - add the parent folder and then open the file
+              const parentDir = filePath.substring(0, filePath.lastIndexOf("/"));
+              if (parentDir) {
+                // Open file after adding workspace
+                const newFolders = normalizeFolders([...currentFolders, parentDir]);
+                setTimeout(async () => {
+                  try {
+                    const content = await invoke<string>("read_file", { path: filePath, workspaceRoot: parentDir });
+                    const file: OpenFile = { path: filePath, name, content, dirty: false };
+                    setOpenFiles((prev) => [...prev, file]);
+                    setActiveFile(filePath);
+                  } catch (err) {
+                    console.error("Failed to open dropped file:", err);
+                  }
+                }, 50);
+                return newFolders;
+              }
+            }
+            return currentFolders;
+          });
+
+          // Open file if workspace exists
+          if (workspaceFolders.length > 0) {
+            try {
+              const wsRoot = workspaceFolders.find(f => filePath.startsWith(f)) || null;
+              const content = await invoke<string>("read_file", { path: filePath, workspaceRoot: wsRoot });
+              const file: OpenFile = { path: filePath, name, content, dirty: false };
+              setOpenFiles((prev) => {
+                const existing = prev.find(f => f.path === filePath);
+                if (existing) return prev;
+                return [...prev, file];
+              });
+              setActiveFile(filePath);
+              // Reveal in sidebar
+              setTimeout(() => sidebarRef.current?.revealFile(filePath), 100);
+            } catch (err) {
+              console.error("Failed to open dropped file:", err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to process dropped item:", err);
+      }
+    }
+  }, [workspaceFolders]);
+
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(() => {
     try {
-      const raw = localStorage.getItem("yac-editor-settings");
+      const raw = localStorage.getItem("dcode-editor-settings");
       if (raw) return normalizeEditorSettings(JSON.parse(raw));
     } catch {}
     return DEFAULT_EDITOR_SETTINGS;
   });
 
   const [openInNewWindow, setOpenInNewWindow] = useState(
-    () => localStorage.getItem("yac-open-new-window") === "true"
+    () => localStorage.getItem("dcode-open-new-window") === "true"
   );
 
   const updateEditorSettings = useCallback((patch: Partial<EditorSettings>) => {
     setEditorSettings((prev) => {
       const next = normalizeEditorSettings({ ...prev, ...patch });
-      localStorage.setItem("yac-editor-settings", JSON.stringify(next));
+      localStorage.setItem("dcode-editor-settings", JSON.stringify(next));
       return next;
     });
   }, []);
@@ -249,7 +369,7 @@ export default function App() {
           Math.max(MIN_EDITOR_FONT_SIZE, prev.fontSize + delta)
         ),
       });
-      localStorage.setItem("yac-editor-settings", JSON.stringify(next));
+      localStorage.setItem("dcode-editor-settings", JSON.stringify(next));
       return next;
     });
   }, []);
@@ -260,12 +380,12 @@ export default function App() {
 
   const updateTheme = useCallback((newTheme: string) => {
     setTheme(newTheme);
-    localStorage.setItem("yac-theme", newTheme);
+    localStorage.setItem("dcode-theme", newTheme);
   }, []);
 
   const updateOpenInNewWindow = useCallback((newWindow: boolean) => {
     setOpenInNewWindow(newWindow);
-    localStorage.setItem("yac-open-new-window", String(newWindow));
+    localStorage.setItem("dcode-open-new-window", String(newWindow));
   }, []);
 
   const getWorkspaceRootForPath = useCallback((path: string): string | null => {
@@ -344,7 +464,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("yac-theme", theme);
+    localStorage.setItem("dcode-theme", theme);
   }, [theme]);
 
   useEffect(() => {
@@ -376,19 +496,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("yac-sidebar-width", String(sidebarWidth));
+    localStorage.setItem("dcode-sidebar-width", String(sidebarWidth));
   }, [sidebarWidth]);
 
   useEffect(() => {
-    localStorage.setItem("yac-show-sidebar", String(showSidebar));
+    localStorage.setItem("dcode-show-sidebar", String(showSidebar));
   }, [showSidebar]);
 
   useEffect(() => {
-    localStorage.setItem("yac-terminal-position", terminalPosition);
+    localStorage.setItem("dcode-terminal-position", terminalPosition);
   }, [terminalPosition]);
 
   useEffect(() => {
-    localStorage.setItem("yac-terminal-size", String(terminalSize));
+    localStorage.setItem("dcode-terminal-size", String(terminalSize));
   }, [terminalSize]);
 
   // 恢复之前打开的文件
@@ -1017,10 +1137,10 @@ export default function App() {
     showTerminal,
     spawnNewWindow,
     theme,
-    workspaceFolders.length,
     updateEditorSettings,
     updateOpenInNewWindow,
     updateTheme,
+    workspaceFolders,
   ]);
 
   // Intercept window close to show confirmation
@@ -1069,17 +1189,32 @@ export default function App() {
   }, [openFiles]);
 
   return (
-    <div className="app">
-      <div className="titlebar">
-        <span>
-          Yac IDE{workspaceFolders.length > 0 ? ` — ${workspaceFolders.map((p) => p.split("/").pop() || p).join(", ")}` : ""}
-        </span>
-      </div>
-      <div className="main-content" ref={mainContentRef}>
+    <ErrorBoundary>
+      <div
+        className="app"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleFileDrop}
+      >
+        {isDraggingFile && (
+          <div className="drag-overlay">
+            <div className="drag-overlay-content">
+              <i className="fa-regular fa-file-import"></i>
+              <p>
+                {workspaceFolders.length > 0
+                  ? "Drop files to add to workspace or open"
+                  : "Drop files to open"}
+              </p>
+            </div>
+          </div>
+        )}
+        <div className="main-content" ref={mainContentRef}>
         {workspaceFolders.length > 0 ? (
           <>
             {showSidebar && (
               <Sidebar
+                ref={sidebarRef}
                 workspaceFolders={workspaceFolders}
                 onAddFolder={addWorkspaceFolder}
                 onRemoveFolder={removeWorkspaceFolder}
@@ -1112,6 +1247,10 @@ export default function App() {
                   onClose={closeFile}
                   onCloseOthers={closeOthers}
                   onCloseRight={closeRight}
+                  onRevealInTree={(path) => {
+                    setShowSidebar(true);
+                    sidebarRef.current?.revealFile(path);
+                  }}
                 />
                 <div className="editor-container">
                   {currentFile && (
@@ -1182,13 +1321,13 @@ export default function App() {
         ) : (
           <div className="welcome-screen">
             <div className="welcome-content">
-              <h1>Yac IDE</h1>
+              <h1>DCode</h1>
               <p>A minimal, high-performance code editor</p>
               <div className="welcome-actions">
-                <button className="primary-btn" onClick={openFolders}>
+                <button className="primary-btn" onClick={openFolders} title="打开文件夹">
                   <i className="fa-regular fa-folder-open"></i> Open Folder
                 </button>
-                <button className="primary-btn" onClick={openWorkspaceFile}>
+                <button className="primary-btn" onClick={openWorkspaceFile} title="打开工作区">
                   <i className="fa-regular fa-window-restore"></i> Open Workspace
                 </button>
               </div>
@@ -1217,6 +1356,9 @@ export default function App() {
         settings={editorSettings}
         theme={theme}
         onToggleTerminal={() => setShowTerminal((v) => !v)}
+        onToggleSidebar={() => setShowSidebar((v) => !v)}
+        showTerminal={showTerminal}
+        showSidebar={showSidebar}
         aiCliShortcuts={
           workspaceFolders.length > 0 ? (
             <AiCliShortcuts runPreparedCommand={runCliLineInTerminal} />
@@ -1232,5 +1374,6 @@ export default function App() {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 }
