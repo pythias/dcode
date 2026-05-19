@@ -1,6 +1,11 @@
 # DCode
 
-基于 **Tauri 2 + React + Monaco Editor + xterm.js** 构建的桌面代码编辑器（macOS）。
+![macOS](https://img.shields.io/badge/macOS-≥11-blue)
+![Platform](https://img.shields.io/badge/platform-arm64%20%7C%20x86__64-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/github/v/release/pythias/dcode)
+
+> A minimal, high-performance desktop code editor for macOS built with Tauri 2, React, Monaco Editor, and xterm.js.
 
 ## 快速开始
 
@@ -36,14 +41,13 @@ cd ui && pnpm install && cd ..
 cargo tauri dev
 ```
 
-## 使用说明
+## 功能特点
 
-- **打开项目** — 点击侧边栏顶部按钮选择文件夹，或拖入目录到窗口
-- **文件操作** — 侧边栏右键创建、重命名、删除文件和目录
-- **代码编辑** — 点击文件在 Monaco Editor 中打开，支持多 tab 切换和管理
-- **集成终端** — 底部/右侧分屏终端，支持多 tab、拖拽调整大小
-- **主题切换** — 标题栏下拉按钮切换 Dark / Light / Monokai / Solarized Dark
-- **多窗口** — 标题栏 "+" 按钮新建独立窗口，同时打开不同项目
+- **Monaco Editor** — VS Code 同款编辑器，支持语法高亮、代码补全、多主题
+- **集成终端** — 底部/右侧分屏，支持多 tab、拖拽调整大小
+- **多窗口** — 新建独立窗口，同时打开不同项目
+- **多主题** — Dark / Light / Monokai / Solarized Dark
+- **拖拽支持** — 从 Finder 拖入文件/文件夹到窗口
 - **工作区恢复** — 重启后自动恢复上次打开的文件和目录
 
 ## 技术栈
