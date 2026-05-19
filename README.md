@@ -1,4 +1,4 @@
-# Yac IDE
+# DCode
 
 基于 **Tauri 2 + React + Monaco Editor + xterm.js** 构建的桌面代码编辑器（macOS）。
 
@@ -8,7 +8,7 @@
 
 ```bash
 brew tap pythias/tools
-brew install yac
+brew install dcode
 ```
 
 Homebrew 会根据本机架构自动选择 Apple Silicon 或 Intel 安装包。
@@ -17,17 +17,17 @@ Homebrew 会根据本机架构自动选择 Apple Silicon 或 Intel 安装包。
 
 | 架构 | DMG |
 |------|-----|
-| Apple Silicon（M 系列芯片） | [Yac.IDE_latest_aarch64.dmg](https://github.com/pythias/yac/releases/latest/download/Yac.IDE_latest_aarch64.dmg) |
-| Intel（x86_64） | [Yac.IDE_latest_x64.dmg](https://github.com/pythias/yac/releases/latest/download/Yac.IDE_latest_x64.dmg) |
+| Apple Silicon（M 系列芯片） | [DCode_latest_aarch64.dmg](https://github.com/pythias/dcode/releases/latest/download/DCode_latest_aarch64.dmg) |
+| Intel（x86_64） | [DCode_latest_x64.dmg](https://github.com/pythias/dcode/releases/latest/download/DCode_latest_x64.dmg) |
 
-版本化的文件名：`Yac.IDE_<版本>_aarch64.dmg` / `Yac.IDE_<版本>_x64.dmg`（在对应 [Release](https://github.com/pythias/yac/releases) 资产列表中）。
+版本化的文件名：`DCode_<版本>_aarch64.dmg` / `DCode_<版本>_x64.dmg`（在对应 [Release](https://github.com/pythias/dcode/releases) 资产列表中）。
 
 ### 从源码运行
 
 ```bash
 # 前置依赖：Node.js 22.13+, pnpm 11+, Rust 1.80+
 
-cd /path/to/yac
+cd /path/to/dcode
 
 # 安装前端依赖
 cd ui && pnpm install && cd ..
@@ -68,7 +68,7 @@ cd ui && npx tsc --noEmit              # TypeScript 类型检查
 ### 目录结构
 
 ```
-yac/
+dcode/
 ├── src-tauri/         # Rust 后端 — IPC commands、PTY 管理、文件系统操作
 │   └── src/
 │       ├── main.rs

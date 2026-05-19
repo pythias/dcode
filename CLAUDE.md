@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## 项目概述
-Yac IDE — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编辑器（macOS）。
+DCode — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编辑器（macOS）。
 
 ## 技术栈
 | 层 | 技术 |
@@ -15,7 +15,7 @@ Yac IDE — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编
 
 ## 目录结构
 ```
-/Users/chenjie/Code/rust/yac/
+/Users/chenjie/Code/rust/dcode/
 ├── src-tauri/           # Rust 后端
 │   ├── src/
 │   │   ├── main.rs      # 入口
@@ -47,7 +47,7 @@ Yac IDE — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编
 
 ## 开发命令
 ```bash
-cd /Users/chenjie/Code/rust/yac
+cd /Users/chenjie/Code/rust/dcode
 cargo tauri dev     # 启动开发模式（Rust + Vite dev server）
 cargo build         # 仅编译 Rust
 cd ui && npx tsc --noEmit  # TypeScript 类型检查

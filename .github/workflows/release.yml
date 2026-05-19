@@ -83,7 +83,7 @@ jobs:
           MOUNT_DIR=$(mktemp -d)
           hdiutil attach "$DMG" -mountpoint "$MOUNT_DIR" -nobrowse -readonly
           trap 'hdiutil detach "$MOUNT_DIR"' EXIT
-          APP="$MOUNT_DIR/Yac IDE.app"
+          APP="$MOUNT_DIR/DCode.app"
           codesign --display --verbose=4 "$APP"
           codesign --verify --deep --strict --verbose=4 "$APP"
           spctl --assess --type execute --verbose=4 "$APP"
@@ -103,7 +103,7 @@ jobs:
           MOUNT_DIR=$(mktemp -d)
           hdiutil attach "$DMG" -mountpoint "$MOUNT_DIR" -nobrowse -readonly
           trap 'hdiutil detach "$MOUNT_DIR"' EXIT
-          APP="$MOUNT_DIR/Yac IDE.app"
+          APP="$MOUNT_DIR/DCode.app"
           codesign --display --verbose=4 "$APP"
           codesign --verify --deep --strict --verbose=4 "$APP"
           spctl --assess --type execute --verbose=4 "$APP"
@@ -122,10 +122,10 @@ jobs:
           INTEL_SRC=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
 
           DEST_DIR="$(dirname "$ARM_SRC")"
-          ARM_V="${DEST_DIR}/Yac.IDE_${VERSION}_aarch64.dmg"
-          INTEL_V="${DEST_DIR}/Yac.IDE_${VERSION}_x64.dmg"
-          ARM_L="${DEST_DIR}/Yac.IDE_latest_aarch64.dmg"
-          INTEL_L="${DEST_DIR}/Yac.IDE_latest_x64.dmg"
+          ARM_V="${DEST_DIR}/DCode_${VERSION}_aarch64.dmg"
+          INTEL_V="${DEST_DIR}/DCode_${VERSION}_x64.dmg"
+          ARM_L="${DEST_DIR}/DCode_latest_aarch64.dmg"
+          INTEL_L="${DEST_DIR}/DCode_latest_x64.dmg"
 
           cp "$ARM_SRC" "$ARM_V"
           cp "$INTEL_SRC" "$INTEL_V"
@@ -155,7 +155,7 @@ jobs:
         with:
           name: macos-release-assets
           path: |
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Yac.IDE_*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/DCode_*.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -195,7 +195,7 @@ jobs:
           VERSION="${VERSION#v}"
           mkdir -p upload
           SRC=$(find src-tauri/target/release/bundle/nsis -name "*.exe" | head -1)
-          cp "$SRC" "upload/Yac.IDE_${VERSION}_x64-setup.exe"
+          cp "$SRC" "upload/DCode_${VERSION}_x64-setup.exe"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -247,8 +247,8 @@ jobs:
           mkdir -p upload
           DEB_SRC=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
           IMG_SRC=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)
-          cp "$DEB_SRC" "upload/Yac.IDE_${VERSION}_amd64.deb"
-          cp "$IMG_SRC" "upload/Yac.IDE_${VERSION}_amd64.AppImage"
+          cp "$DEB_SRC" "upload/DCode_${VERSION}_amd64.deb"
+          cp "$IMG_SRC" "upload/DCode_${VERSION}_amd64.AppImage"
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -306,46 +306,46 @@ jobs:
         run: |
           cd homebrew-tools
           mkdir -p Casks
-          cat <<'RUBY' > Casks/yac.rb
-          cask "yac" do
+          cat <<'RUBY' > Casks/dcode.rb
+          cask "dcode" do
             version "__PKG_VERSION__"
 
             on_arm do
-              url "https://github.com/pythias/yac/releases/download/v#{version}/Yac.IDE_#{version}_aarch64.dmg",
-                  verified: "github.com/pythias/yac/"
+              url "https://github.com/pythias/dcode/releases/download/v#{version}/DCode_#{version}_aarch64.dmg",
+                  verified: "github.com/pythias/dcode/"
               sha256 "__SHA_ARM__"
             end
 
             on_intel do
-              url "https://github.com/pythias/yac/releases/download/v#{version}/Yac.IDE_#{version}_x64.dmg",
-                  verified: "github.com/pythias/yac/"
+              url "https://github.com/pythias/dcode/releases/download/v#{version}/DCode_#{version}_x64.dmg",
+                  verified: "github.com/pythias/dcode/"
               sha256 "__SHA_INTEL__"
             end
 
-            name "Yac IDE"
+            name "DCode"
             desc "A minimal IDE built with Tauri + React"
-            homepage "https://github.com/pythias/yac"
+            homepage "https://github.com/pythias/dcode"
 
-            app "Yac IDE.app"
+            app "DCode.app"
           end
           RUBY
           sed -i \
             -e "s/__PKG_VERSION__/${PKG_VERSION}/g" \
             -e "s/__SHA_ARM__/${SHA_ARM}/g" \
             -e "s/__SHA_INTEL__/${SHA_INTEL}/g" \
-            Casks/yac.rb
-          ruby -c Casks/yac.rb
-          cat Casks/yac.rb
+            Casks/dcode.rb
+          ruby -c Casks/dcode.rb
+          cat Casks/dcode.rb
 
       - name: Commit and push Homebrew Cask
         run: |
           cd homebrew-tools
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/yac.rb
+          git add Casks/dcode.rb
           if git diff --cached --quiet; then
-            echo "Casks/yac.rb already matches this release."
+            echo "Casks/dcode.rb already matches this release."
             exit 0
           fi
-          git commit -m "chore: update yac to ${{ github.ref_name }}"
+          git commit -m "chore: update dcode to ${{ github.ref_name }}"
           git push

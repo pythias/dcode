@@ -25,11 +25,11 @@ jobs:
         run: |
           VERSION="${{ steps.release.outputs.version }}"
           TAG="${{ steps.release.outputs.tag }}"
-          BASE="https://github.com/pythias/yac/releases/download/${TAG}"
-          curl -fL -o /tmp/yac_aarch64.dmg "${BASE}/Yac.IDE_${VERSION}_aarch64.dmg"
-          curl -fL -o /tmp/yac_x64.dmg "${BASE}/Yac.IDE_${VERSION}_x64.dmg"
-          echo "sha256_arm=$(shasum -a 256 /tmp/yac_aarch64.dmg | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "sha256_intel=$(shasum -a 256 /tmp/yac_x64.dmg | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          BASE="https://github.com/pythias/dcode/releases/download/${TAG}"
+          curl -fL -o /tmp/dcode_aarch64.dmg "${BASE}/DCode_${VERSION}_aarch64.dmg"
+          curl -fL -o /tmp/dcode_x64.dmg "${BASE}/DCode_${VERSION}_x64.dmg"
+          echo "sha256_arm=$(shasum -a 256 /tmp/dcode_aarch64.dmg | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "sha256_intel=$(shasum -a 256 /tmp/dcode_x64.dmg | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Checkout homebrew-tools tap
         uses: actions/checkout@v4
@@ -46,46 +46,46 @@ jobs:
         run: |
           cd homebrew-tools
           mkdir -p Casks
-          cat <<'RUBY' > Casks/yac.rb
-          cask "yac" do
+          cat <<'RUBY' > Casks/dcode.rb
+          cask "dcode" do
             version "__PKG_VERSION__"
 
             on_arm do
-              url "https://github.com/pythias/yac/releases/download/v#{version}/Yac.IDE_#{version}_aarch64.dmg",
-                  verified: "github.com/pythias/yac/"
+              url "https://github.com/pythias/dcode/releases/download/v#{version}/DCode_#{version}_aarch64.dmg",
+                  verified: "github.com/pythias/dcode/"
               sha256 "__SHA_ARM__"
             end
 
             on_intel do
-              url "https://github.com/pythias/yac/releases/download/v#{version}/Yac.IDE_#{version}_x64.dmg",
-                  verified: "github.com/pythias/yac/"
+              url "https://github.com/pythias/dcode/releases/download/v#{version}/DCode_#{version}_x64.dmg",
+                  verified: "github.com/pythias/dcode/"
               sha256 "__SHA_INTEL__"
             end
 
-            name "Yac IDE"
+            name "DCode"
             desc "A minimal IDE built with Tauri + React"
-            homepage "https://github.com/pythias/yac"
+            homepage "https://github.com/pythias/dcode"
 
-            app "Yac IDE.app"
+            app "DCode.app"
           end
           RUBY
           sed -i '' \
             -e "s/__PKG_VERSION__/${PKG_VERSION}/g" \
             -e "s/__SHA_ARM__/${SHA_ARM}/g" \
             -e "s/__SHA_INTEL__/${SHA_INTEL}/g" \
-            Casks/yac.rb
-          ruby -c Casks/yac.rb
-          cat Casks/yac.rb
+            Casks/dcode.rb
+          ruby -c Casks/dcode.rb
+          cat Casks/dcode.rb
 
       - name: Commit and push
         run: |
           cd homebrew-tools
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/yac.rb
+          git add Casks/dcode.rb
           if git diff --cached --quiet; then
-            echo "Casks/yac.rb already matches."
+            echo "Casks/dcode.rb already matches."
             exit 0
           fi
-          git commit -m "chore: update yac to ${{ steps.release.outputs.version }}"
+          git commit -m "chore: update dcode to ${{ steps.release.outputs.version }}"
           git push

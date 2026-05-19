@@ -1,21 +1,11 @@
-**摘要**: Yac IDE 项目架构、技术栈、目录结构、开发命令 | **创建**: 2026-05-09 | **更新**: 2026-05-09
+**摘要**: DCode 项目架构、技术栈、目录结构、开发命令 | **创建**: 2026-05-09 | **更新**: 2026-05-19
 
 ## 项目概述
-Yac IDE — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编辑器（macOS）。
-
-## 技术栈
-| 层 | 技术 |
-|---|---|
-| Desktop Shell | Tauri 2 (WKWebView) |
-| Frontend | React 18 + TypeScript 5 + Vite 5 |
-| Editor | Monaco Editor (@monaco-editor/react) |
-| Terminal | xterm.js + @xterm/addon-fit |
-| Backend | Rust (portable-pty + 文件系统操作) |
-| 包管理 | pnpm (前端) / Cargo (后端) |
+DCode — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编辑器（macOS）。
 
 ## 目录结构
 ```
-/Users/chenjie/Code/rust/yac/
+/Users/chenjie/Code/rust/dcode/
 ├── src-tauri/           # Rust 后端
 │   ├── src/
 │   │   ├── main.rs      # 入口
@@ -41,7 +31,7 @@ Yac IDE — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编
 
 ## 架构关键决策
 1. **IPC 通信**: 前端 `invoke()` 调用 Rust commands；PTY 输出通过 Tauri events (`pty-output`) 推送到前端
-2. **状态管理**: App.tsx 集中管理 `openFiles[]` / `activeFile` / `rootPath` / `showTerminal`，通过 localStorage key `"yac-ide-state"` 持久化
+2. **状态管理**: App.tsx 集中管理 `openFiles[]` / `activeFile` / `rootPath` / `showTerminal`，通过 localStorage key `"dcode-ide-state"` 持久化
 3. **PTY 事件驱动**: Rust reader thread 循环读取 PTY master → emit Tauri event；前端 listen `pty-output` 根据 ptyId 路由到对应 tab 的 terminal.write()
 4. **终端多 tab**: 每个 tab 独立 div 容器 + xterm Terminal 实例，切换通过 `display: none/block` 而非 destroy/recreate
 5. **Monaco 语言检测**: 基于文件扩展名映射表（rust/go/python/js/ts/json/toml/yaml/md/html/css/sh/c/cpp/java/xml/sql/dockerfile → plaintext fallback）
@@ -61,7 +51,7 @@ Yac IDE — 基于 Tauri 2 + React + Monaco Editor + xterm.js 的桌面代码编
 
 ## 开发命令
 ```bash
-cd /Users/chenjie/Code/rust/yac
+cd /Users/chenjie/Code/rust/dcode
 cargo tauri dev              # 启动开发模式
 cargo build --manifest-path src-tauri/Cargo.toml  # 仅编译 Rust
 cd ui && npx tsc --noEmit    # TypeScript 类型检查
